@@ -1,0 +1,25 @@
+USE master
+Create Table ##temp
+(
+    DatabaseName sysname,
+    File_id   int,
+    Name sysname,
+    physical_name nvarchar(500),
+    sizeInMB decimal (18,2),
+    FreeSpaceInMB decimal (18,2)
+)   
+Exec sp_msforeachdb '
+Use [?];
+Insert Into ##temp (DatabaseName, Name, File_id, physical_name, sizeInMB, FreeSpaceInMB)
+    Select DB_NAME() AS [DatabaseName], Name,  File_id,physical_name, 
+    Cast(Cast(Round(cast(size as decimal) * 8.0/1024.0,2) as decimal(18,2)) as nvarchar) sizeInMB,
+    Cast(Cast(Round(cast(size as decimal) * 8.0/1024.0,2) as decimal(18,2)) -
+        Cast(FILEPROPERTY(name, ''SpaceUsed'') * 8.0/1024.0 as decimal(18,2)) as nvarchar) As FreeSpaceInMB
+    From sys.database_files
+'
+Select * From ##temp order by FreeSpaceInMB desc
+
+Select top (12) 'use '+ DatabaseName + ';' + CHAR(9) + CHAR(9) +' dbcc shrinkfile (' + convert (varchar, File_id) + ' , ' + convert (varchar,CAST( round(sizeInMB- FreeSpaceInMB/2,1) as int)) + '); ' from ##temp order by FreeSpaceInMB desc
+
+
+drop table ##temp
