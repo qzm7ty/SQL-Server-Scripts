@@ -1,0 +1,19 @@
+-- Run the three parapgaphs one at a time
+-- Took 3mins 46 seconds on an MSDB with 77,000 rows
+
+select @@servername
+
+use msdb
+select min(backup_start_date) from dbo.backupset
+select count(*) from dbo.backupset
+
+CREATE INDEX [media_set_id] ON [dbo].[backupset] ([media_set_id])
+CREATE INDEX [restore_history_id] ON [dbo].[restorefile] ([restore_history_id])
+CREATE INDEX [restore_history_id] ON [dbo].[restorefilegroup] ([restore_history_id])
+
+DECLARE @backup_date DATETIME
+set @backup_date=(select dateadd (dd, -30, getDate()))
+EXEC sp_delete_backuphistory @backup_date
+
+-- can monitor in flight using 
+select count (*) from backupfile
